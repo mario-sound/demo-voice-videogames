@@ -29,6 +29,7 @@ function sequence(basePath, total, options = {}) {
 // - freezeOnEnd: opcional, deja el ultimo frame fijo
 // - shortcut: opcional, atajo de teclado
 // - audio: opcional, nombre base del archivo de audio si no coincide con la accion
+// - audioVariants: opcional, numero de variantes de audio disponibles para esa accion
 // - controlLabel: opcional, texto visible del boton si quieres que difiera del label
 //
 // Si una animacion no sigue una numeracion simple, puedes usar:
@@ -52,7 +53,7 @@ window.CHARACTER_LIBRARY = {
     speakLabel: "Speak",
     interactions: {
       click: "hurt",
-      tapThreshold: 7,
+      tapThreshold: 5,
       tapThresholdAction: "death",
     },
     controlActions: ["speak", "jump", "attack", "walk", "idle"],
@@ -123,6 +124,7 @@ window.CHARACTER_LIBRARY = {
         frames: sequence("./characters/Knight/Hurt/hurt", 4),
         fps: 8,
         loop: false,
+        audioVariants: 5,
         shortcut: "h",
       },
       death: {
@@ -144,7 +146,7 @@ window.CHARACTER_LIBRARY = {
     speakLabel: "Speak",
     interactions: {
       click: "hurt",
-      tapThreshold: 7,
+      tapThreshold: 5,
       tapThresholdAction: "death",
     },
     controlActions: ["speak", "jump", "attack", "walk", "idle"],
@@ -207,6 +209,7 @@ window.CHARACTER_LIBRARY = {
         frames: sequence("./characters/Rogue/Hurt/hurt", 4),
         fps: 9,
         loop: false,
+        audioVariants: 5,
         shortcut: "h",
       },
       death: {
@@ -234,7 +237,7 @@ window.CHARACTER_LIBRARY = {
     speakLabel: "Speak",
     interactions: {
       click: "hurt",
-      tapThreshold: 7,
+      tapThreshold: 5,
       tapThresholdAction: "death",
     },
     controlActions: ["speak", "jump", "attack", "walk", "idle"],
@@ -312,6 +315,7 @@ window.CHARACTER_LIBRARY = {
         frames: sequence("./characters/Mage/Hurt/hurt", 4),
         fps: 8,
         loop: false,
+        audioVariants: 5,
         shortcut: "h",
       },
       death: {

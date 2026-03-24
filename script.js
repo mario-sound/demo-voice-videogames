@@ -36,6 +36,7 @@ const state = {
   tapCount: 0,
   attackAltIndex: 0,
   jumpAltIndex: 0,
+  actionAudioVariantIndexes: {},
   speakVariantIndex: 0,
   activeAudio: null,
 };
@@ -95,6 +96,41 @@ function getAudioName(actionName) {
   return actionConfig?.audio || actionName;
 }
 
+function getActionAudioVariantCount(actionName) {
+  const actionConfig = getAnimation(actionName);
+  return Math.max(1, actionConfig?.audioVariants || 1);
+}
+
+function getActionAudioVariantNumber(actionName) {
+  const variantCount = getActionAudioVariantCount(actionName);
+  const variantIndex = state.actionAudioVariantIndexes[actionName] || 0;
+  return variantCount <= 1 ? 1 : (variantIndex % variantCount) + 1;
+}
+
+function getResolvedActionAudioName(actionName) {
+  const audioName = getAudioName(actionName);
+  const variantCount = getActionAudioVariantCount(actionName);
+
+  if (variantCount <= 1) {
+    return audioName;
+  }
+
+  return `${audioName}_${getActionAudioVariantNumber(actionName)}`;
+}
+
+function advanceActionAudioVariant(actionName) {
+  const variantCount = getActionAudioVariantCount(actionName);
+
+  if (variantCount <= 1) {
+    state.actionAudioVariantIndexes[actionName] = 0;
+    return;
+  }
+
+  const currentIndex = state.actionAudioVariantIndexes[actionName] || 0;
+  state.actionAudioVariantIndexes[actionName] =
+    (currentIndex + 1) % variantCount;
+}
+
 function getAudioPath(audioName) {
   const characterConfig = getCharacterConfig();
   const audioFolder = characterConfig?.audioFolder;
@@ -124,7 +160,7 @@ function getSpeakAudioPath() {
 }
 
 function getActionAudioPath(actionName) {
-  return getAudioPath(getAudioName(actionName));
+  return getAudioPath(getResolvedActionAudioName(actionName));
 }
 
 function getDefaultBaseAction(characterConfig) {
@@ -395,11 +431,15 @@ function playActionAudio(actionName, origin = "action") {
     return;
   }
 
+  const variantCount = getActionAudioVariantCount(actionName);
+  const variantNumber = getActionAudioVariantNumber(actionName);
+
   emitCharacterEvent("character:interaction", {
     type: "action-audio",
     character: state.currentCharacterKey,
     language: state.currentLanguage,
     action: actionName,
+    variant: variantCount <= 1 ? null : variantNumber,
     origin,
     src: audioPath,
   });
@@ -408,7 +448,10 @@ function playActionAudio(actionName, origin = "action") {
     action: actionName,
     type: "action-audio",
     origin,
+    variant: variantCount <= 1 ? null : variantNumber,
   });
+
+  advanceActionAudioVariant(actionName);
 }
 
 function startJumpVisual(actionName) {
@@ -544,6 +587,7 @@ function handleUtilityAction(actionName, origin = "control") {
     state.tapCount = 0;
     state.attackAltIndex = 0;
     state.jumpAltIndex = 0;
+    state.actionAudioVariantIndexes = {};
     state.speakVariantIndex = 0;
     state.baseAction = getDefaultBaseAction(getCharacterConfig());
     state.isFlipped = false;
@@ -692,6 +736,7 @@ function switchCharacter(characterKey, origin = "selector") {
   state.tapCount = 0;
   state.attackAltIndex = 0;
   state.jumpAltIndex = 0;
+  state.actionAudioVariantIndexes = {};
   state.speakVariantIndex = 0;
 
   clearJumpVisual();
@@ -808,6 +853,7 @@ characterSelect.addEventListener("change", (event) => {
 languageSelect.addEventListener("change", (event) => {
   stopActiveAudio();
   state.currentLanguage = event.target.value;
+  state.actionAudioVariantIndexes = {};
   state.speakVariantIndex = 0;
   syncCharacterUI("language-selector");
 
