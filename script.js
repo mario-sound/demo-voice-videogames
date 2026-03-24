@@ -1,14 +1,19 @@
 const characterLibrary = window.CHARACTER_LIBRARY || {};
 const characterKeys = Object.keys(characterLibrary);
+const availableLanguages = window.AVAILABLE_LANGUAGES || [
+  { code: "es", label: "Español" },
+];
 
 const sprite = document.querySelector("#character-sprite");
 const trigger = document.querySelector("#character-trigger");
 const actionContainer = document.querySelector("#character-actions");
 const characterSelect = document.querySelector("#character-select");
+const languageSelect = document.querySelector("#language-select");
 
 const statusCharacter = document.querySelector("#status-character");
 const statusAction = document.querySelector("#status-action");
 const statusOrigin = document.querySelector("#status-origin");
+const statusLanguage = document.querySelector("#status-language");
 const statusBase = document.querySelector("#status-base");
 const statusFacing = document.querySelector("#status-facing");
 
@@ -18,6 +23,7 @@ const helpShortcuts = document.querySelector("#help-shortcuts");
 
 const state = {
   currentCharacterKey: characterKeys[0] || null,
+  currentLanguage: availableLanguages[0]?.code || "es",
   baseAction: "",
   currentAction: "",
   isBusy: false,
@@ -30,6 +36,8 @@ const state = {
   tapCount: 0,
   attackAltIndex: 0,
   jumpAltIndex: 0,
+  speakVariantIndex: 0,
+  activeAudio: null,
 };
 
 function getCharacterConfig() {
@@ -50,9 +58,73 @@ function getAnimation(actionName) {
   return getAnimations()[actionName];
 }
 
+function getControlMeta(actionName) {
+  const characterConfig = getCharacterConfig();
+
+  if (actionName === "speak") {
+    return {
+      label: characterConfig?.speakLabel || "Speak",
+      shortcut: "s",
+    };
+  }
+
+  const animation = getAnimation(actionName);
+  if (!animation) {
+    return null;
+  }
+
+  return {
+    label: animation.controlLabel || animation.label || actionName,
+    shortcut: animation.shortcut || null,
+    loop: Boolean(animation.loop),
+  };
+}
+
 function getActionLabel(actionName) {
+  const controlMeta = getControlMeta(actionName);
+  if (controlMeta) {
+    return controlMeta.label;
+  }
+
   const animation = getAnimation(actionName);
   return animation ? animation.label || actionName : actionName;
+}
+
+function getAudioName(actionName) {
+  const actionConfig = getAnimation(actionName);
+  return actionConfig?.audio || actionName;
+}
+
+function getAudioPath(audioName) {
+  const characterConfig = getCharacterConfig();
+  const audioFolder = characterConfig?.audioFolder;
+  const languageCode = state.currentLanguage;
+
+  if (!audioFolder || !languageCode || !audioName) {
+    return null;
+  }
+
+  return `./audio/${audioFolder}/${languageCode}/${audioName}_${languageCode}.mp3`;
+}
+
+function getSpeakVariantCount() {
+  const characterConfig = getCharacterConfig();
+  return Math.max(1, characterConfig?.speakVariants || 1);
+}
+
+function getSpeakAudioPath() {
+  const variantCount = getSpeakVariantCount();
+
+  if (variantCount <= 1) {
+    return getAudioPath("speak");
+  }
+
+  const variantNumber = (state.speakVariantIndex % variantCount) + 1;
+  return getAudioPath(`speak_${variantNumber}`);
+}
+
+function getActionAudioPath(actionName) {
+  return getAudioPath(getAudioName(actionName));
 }
 
 function getDefaultBaseAction(characterConfig) {
@@ -87,6 +159,7 @@ function updateStatus(origin) {
   statusCharacter.textContent = characterConfig ? characterConfig.label : "-";
   statusAction.textContent = state.currentAction || "-";
   statusOrigin.textContent = origin;
+  statusLanguage.textContent = state.currentLanguage || "-";
   statusBase.textContent = state.baseAction || "-";
   statusFacing.textContent = state.isFlipped ? "izquierda" : "derecha";
 }
@@ -112,15 +185,12 @@ function getRestingAction() {
 }
 
 function getShortcutMarkup() {
-  const visibleActions = new Set(getControlActions());
-  const shortcuts = Object.entries(getAnimations())
-    .filter(
-      ([actionName, actionConfig]) =>
-        visibleActions.has(actionName) && actionConfig.shortcut,
-    )
+  const shortcuts = getControlActions()
+    .map((actionName) => getControlMeta(actionName))
+    .filter((controlMeta) => Boolean(controlMeta?.shortcut))
     .map(
-      ([, actionConfig]) =>
-        `<code>${actionConfig.shortcut}</code> ${actionConfig.label}`,
+      (controlMeta) =>
+        `<code>${controlMeta.shortcut}</code> ${controlMeta.label}`,
     );
 
   shortcuts.push("<code>r</code> reset");
@@ -137,24 +207,33 @@ function renderSelector() {
       return `<option value="${characterKey}" ${selected}>${characterConfig.label}</option>`;
     })
     .join("");
+
+  languageSelect.innerHTML = availableLanguages
+    .map((language) => {
+      const selected =
+        language.code === state.currentLanguage ? "selected" : "";
+      return `<option value="${language.code}" ${selected}>${language.label}</option>`;
+    })
+    .join("");
 }
 
 function renderControls() {
   const actions = getControlActions()
-    .map((actionName) => [actionName, getAnimation(actionName)])
-    .filter(([, actionConfig]) => Boolean(actionConfig));
+    .map((actionName) => [actionName, getControlMeta(actionName)])
+    .filter(([, controlMeta]) => Boolean(controlMeta));
 
-  const actionButtons = actions.map(([actionKey, actionConfig]) => {
+  const actionButtons = actions.map(([actionKey, controlMeta]) => {
+    const animation = getAnimation(actionKey);
     const buttonClass = [
       "control-btn",
-      state.baseAction === actionKey && actionConfig.loop ? "is-active" : "",
+      state.baseAction === actionKey && animation?.loop ? "is-active" : "",
     ]
       .filter(Boolean)
       .join(" ");
 
     return `
         <button type="button" class="${buttonClass}" data-action="${actionKey}">
-          ${actionConfig.label}
+          ${controlMeta.label}
         </button>
       `;
   });
@@ -222,7 +301,7 @@ function applyFlip(origin = "flip", options = {}) {
 function resetToBase(origin = "reset") {
   state.isFrozen = false;
   state.isBusy = false;
-  playAction(state.baseAction, { origin, force: true });
+  playAction(state.baseAction, { origin, force: true, withAudio: false });
 }
 
 function clearJumpVisual() {
@@ -232,6 +311,104 @@ function clearJumpVisual() {
   }
 
   trigger.classList.remove("is-jumping");
+}
+
+function stopActiveAudio() {
+  if (!state.activeAudio) {
+    return;
+  }
+
+  state.activeAudio.pause();
+  state.activeAudio.currentTime = 0;
+  state.activeAudio = null;
+}
+
+function playAudio(audioPath, detail = {}) {
+  if (!audioPath) {
+    return;
+  }
+
+  stopActiveAudio();
+
+  const audio = new Audio(audioPath);
+  state.activeAudio = audio;
+
+  audio.addEventListener("ended", () => {
+    if (state.activeAudio === audio) {
+      state.activeAudio = null;
+    }
+  });
+
+  audio.addEventListener("error", () => {
+    console.warn(`[audio] No se pudo cargar ${audioPath}`);
+    if (state.activeAudio === audio) {
+      state.activeAudio = null;
+    }
+
+    emitCharacterEvent("character:audio-error", {
+      character: state.currentCharacterKey,
+      language: state.currentLanguage,
+      src: audioPath,
+      ...detail,
+    });
+  });
+
+  const playPromise = audio.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch((error) => {
+      console.warn(`[audio] No se pudo reproducir ${audioPath}`, error);
+      if (state.activeAudio === audio) {
+        state.activeAudio = null;
+      }
+    });
+  }
+}
+
+function playSpeakAudio(origin = "control") {
+  const audioPath = getSpeakAudioPath();
+  if (!audioPath) {
+    return;
+  }
+
+  const variantCount = getSpeakVariantCount();
+  const variantNumber =
+    variantCount <= 1 ? 1 : (state.speakVariantIndex % variantCount) + 1;
+
+  updateStatus(`${origin}-speak`);
+  emitCharacterEvent("character:interaction", {
+    type: "speak",
+    character: state.currentCharacterKey,
+    language: state.currentLanguage,
+    action: "speak",
+    variant: variantNumber,
+    src: audioPath,
+  });
+  playAudio(audioPath, { action: "speak", type: "speak", origin });
+
+  state.speakVariantIndex =
+    variantCount <= 1 ? 0 : (state.speakVariantIndex + 1) % variantCount;
+}
+
+function playActionAudio(actionName, origin = "action") {
+  const audioPath = getActionAudioPath(actionName);
+  if (!audioPath) {
+    return;
+  }
+
+  emitCharacterEvent("character:interaction", {
+    type: "action-audio",
+    character: state.currentCharacterKey,
+    language: state.currentLanguage,
+    action: actionName,
+    origin,
+    src: audioPath,
+  });
+
+  playAudio(audioPath, {
+    action: actionName,
+    type: "action-audio",
+    origin,
+  });
 }
 
 function startJumpVisual(actionName) {
@@ -285,7 +462,11 @@ function runAnimationStep(actionName, origin) {
       return;
     }
 
-    playAction(getRestingAction(), { origin: `${origin}-return`, force: true });
+    playAction(getRestingAction(), {
+      origin: `${origin}-return`,
+      force: true,
+      withAudio: false,
+    });
     return;
   }
 
@@ -297,7 +478,7 @@ function runAnimationStep(actionName, origin) {
 }
 
 function playAction(actionName, options = {}) {
-  const { origin = "system", force = false } = options;
+  const { origin = "system", force = false, withAudio = true } = options;
   const animation = getAnimation(actionName);
 
   if (!animation) {
@@ -314,6 +495,9 @@ function playAction(actionName, options = {}) {
   state.isBusy = !animation.loop;
 
   startJumpVisual(actionName);
+  if (withAudio) {
+    playActionAudio(actionName, origin);
+  }
   syncCharacterUI(origin);
   emitCharacterEvent("character:action", {
     character: state.currentCharacterKey,
@@ -356,9 +540,11 @@ function triggerOneShot(actionName, origin = "interaction") {
 
 function handleUtilityAction(actionName, origin = "control") {
   if (actionName === "reset") {
+    stopActiveAudio();
     state.tapCount = 0;
     state.attackAltIndex = 0;
     state.jumpAltIndex = 0;
+    state.speakVariantIndex = 0;
     state.baseAction = getDefaultBaseAction(getCharacterConfig());
     state.isFlipped = false;
     applyFlip(origin);
@@ -412,9 +598,18 @@ function resolveJumpAction() {
 }
 
 function handleAction(actionName, origin = "control") {
+  if (actionName === "speak") {
+    playSpeakAudio(origin);
+    return;
+  }
+
   if (actionName === "walk") {
     const toggledAction =
-      state.baseAction === "walk" ? "run" : state.baseAction === "run" ? "walk" : "walk";
+      state.baseAction === "walk"
+        ? "run"
+        : state.baseAction === "run"
+          ? "walk"
+          : "walk";
 
     setBaseAction(toggledAction, origin);
     emitCharacterEvent("character:interaction", {
@@ -484,6 +679,7 @@ function switchCharacter(characterKey, origin = "selector") {
     return;
   }
 
+  stopActiveAudio();
   clearAnimationTimer();
   state.currentCharacterKey = characterKey;
   state.baseAction = getDefaultBaseAction(nextCharacter);
@@ -496,12 +692,13 @@ function switchCharacter(characterKey, origin = "selector") {
   state.tapCount = 0;
   state.attackAltIndex = 0;
   state.jumpAltIndex = 0;
+  state.speakVariantIndex = 0;
 
   clearJumpVisual();
   sprite.alt = nextCharacter.spriteAlt || nextCharacter.label;
   applyFlip(origin, { emit: false });
   syncCharacterUI(origin);
-  playAction(state.baseAction, { origin, force: true });
+  playAction(state.baseAction, { origin, force: true, withAudio: false });
 
   emitCharacterEvent("character:interaction", {
     type: "character-change",
@@ -608,6 +805,19 @@ characterSelect.addEventListener("change", (event) => {
   switchCharacter(event.target.value, "selector");
 });
 
+languageSelect.addEventListener("change", (event) => {
+  stopActiveAudio();
+  state.currentLanguage = event.target.value;
+  state.speakVariantIndex = 0;
+  syncCharacterUI("language-selector");
+
+  emitCharacterEvent("character:interaction", {
+    type: "language-change",
+    character: state.currentCharacterKey,
+    language: state.currentLanguage,
+  });
+});
+
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
 
@@ -616,24 +826,16 @@ window.addEventListener("keydown", (event) => {
     return;
   }
 
-  const visibleActions = new Set(getControlActions());
-  const shortcutMatch = Object.entries(getAnimations()).find(
-    ([actionName, actionConfig]) =>
-      visibleActions.has(actionName) &&
-      actionConfig.shortcut?.toLowerCase() === key,
-  );
+  const shortcutMatch = getControlActions().find((actionName) => {
+    const controlMeta = getControlMeta(actionName);
+    return controlMeta?.shortcut?.toLowerCase() === key;
+  });
 
   if (!shortcutMatch) {
     return;
   }
 
-  const [actionName, actionConfig] = shortcutMatch;
-  if (actionConfig.loop) {
-    setBaseAction(actionName, "keyboard");
-    return;
-  }
-
-  triggerOneShot(actionName, "keyboard");
+  handleAction(shortcutMatch, "keyboard");
 });
 
 window.addEventListener("character:action", (event) => {

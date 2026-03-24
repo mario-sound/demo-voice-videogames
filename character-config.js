@@ -12,6 +12,9 @@ function sequence(basePath, total, options = {}) {
 // - label: nombre visible
 // - spriteAlt: texto alternativo
 // - defaultBaseAction: animacion en reposo
+// - audioFolder: carpeta base de audios para ese personaje
+// - speakVariants: cantidad de variantes disponibles para la accion speak
+// - speakLabel: texto visible del boton Speak
 // - interactions.click: accion puntual al hacer click o tap
 // - interactions.tapThreshold: numero de taps para disparar una accion especial
 // - interactions.tapThresholdAction: accion especial al alcanzar el umbral
@@ -25,20 +28,34 @@ function sequence(basePath, total, options = {}) {
 // - loop: true para animaciones base, false para acciones puntuales
 // - freezeOnEnd: opcional, deja el ultimo frame fijo
 // - shortcut: opcional, atajo de teclado
+// - audio: opcional, nombre base del archivo de audio si no coincide con la accion
+// - controlLabel: opcional, texto visible del boton si quieres que difiera del label
 //
 // Si una animacion no sigue una numeracion simple, puedes usar:
 // frames: ["./ruta/frame-a.png", "./ruta/frame-b.png"]
+window.AVAILABLE_LANGUAGES = [
+  { code: "esES", label: "Spanish" },
+  { code: "enUS", label: "English US" },
+  { code: "enUK", label: "English UK" },
+  { code: "deDE", label: "German" },
+  { code: "frFR", label: "French" },
+  { code: "itIT", label: "Italian" },
+];
+
 window.CHARACTER_LIBRARY = {
   knight: {
     label: "Knight",
     spriteAlt: "Caballero pixel art",
     defaultBaseAction: "idle",
+    audioFolder: "Knight",
+    speakVariants: 5,
+    speakLabel: "Speak",
     interactions: {
       click: "hurt",
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
-    controlActions: ["idle", "walk", "attack", "jump", "hurt"],
+    controlActions: ["speak", "idle", "walk", "attack", "jump"],
     actions: {
       idle: {
         label: "Idle",
@@ -122,12 +139,15 @@ window.CHARACTER_LIBRARY = {
     label: "Rogue",
     spriteAlt: "Picaro pixel art",
     defaultBaseAction: "idle",
+    audioFolder: "Rogue",
+    speakVariants: 5,
+    speakLabel: "Speak",
     interactions: {
       click: "hurt",
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
-    controlActions: ["idle", "walk", "attack", "jump", "hurt"],
+    controlActions: ["speak", "idle", "walk", "attack", "jump"],
     actions: {
       idle: {
         label: "Idle",
@@ -209,12 +229,15 @@ window.CHARACTER_LIBRARY = {
     label: "Mage",
     spriteAlt: "Mago pixel art",
     defaultBaseAction: "idle",
+    audioFolder: "Mage",
+    speakVariants: 5,
+    speakLabel: "Speak",
     interactions: {
       click: "hurt",
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
-    controlActions: ["idle", "walk", "attack", "jump", "hurt"],
+    controlActions: ["speak", "idle", "walk", "attack", "jump"],
     actions: {
       idle: {
         label: "Idle",

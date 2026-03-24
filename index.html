@@ -20,12 +20,25 @@
         </div>
 
         <section class="selector-panel">
-          <p class="eyebrow">Selecciona tu personaje</p>
-          <select
-            id="character-select"
-            class="character-select"
-            aria-label="Seleccionar personaje"
-          ></select>
+          <p class="eyebrow">Selecciona personaje e idioma</p>
+          <div class="selector-grid">
+            <label class="selector-field">
+              <!-- <span class="selector-label">Personaje</span> -->
+              <select
+                id="character-select"
+                class="character-select"
+                aria-label="Seleccionar personaje"
+              ></select>
+            </label>
+            <label class="selector-field">
+              <!-- <span class="selector-label">Idioma</span> -->
+              <select
+                id="language-select"
+                class="character-select"
+                aria-label="Seleccionar idioma"
+              ></select>
+            </label>
+          </div>
         </section>
 
         <div class="stage" aria-label="Escenario del personaje">
@@ -66,6 +79,10 @@
             <div>
               <span class="status-label">Origen</span>
               <strong id="status-origin">inicio</strong>
+            </div>
+            <div>
+              <span class="status-label">Idioma</span>
+              <strong id="status-language">es</strong>
             </div>
             <div>
               <span class="status-label">Modo base</span>

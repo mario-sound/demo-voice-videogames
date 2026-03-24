@@ -110,9 +110,19 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.selector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.selector-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
 .selector-label {
   display: block;
-  margin-bottom: 0.45rem;
   color: var(--text-soft);
   font-size: 0.92rem;
 }
@@ -334,5 +344,11 @@ code {
 
   .character-sprite {
     width: min(28vw, 220px);
+  }
+}
+
+@media (max-width: 520px) {
+  .selector-grid {
+    grid-template-rows: 1fr;
   }
 }
