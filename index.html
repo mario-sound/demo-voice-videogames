@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -12,14 +12,24 @@
     <main class="app-shell">
       <section class="scene-card">
         <div class="scene-copy">
-          <p class="eyebrow">Demo base</p>
-          <h1>Personaje PNG interactivo</h1>
-          <p class="scene-description">
-            Toca o haz click en el personaje para disparar acciones, manten la
-            pulsacion para acciones largas o usa los botones. Esta estructura
-            queda preparada para conectar notificaciones mas adelante.
+          <p class="eyebrow" hidden>Demo base</p>
+          <h1>DigiTalks Chars Voice Demo</h1>
+          <p class="scene-description" hidden>
+            Usa los botones o haz click en el personaje para disparar acciones.
           </p>
         </div>
+
+        <section class="selector-panel">
+          <p class="eyebrow">Personaje</p>
+          <label class="selector-label" for="character-select"
+            >Selecciona personaje</label
+          >
+          <select
+            id="character-select"
+            class="character-select"
+            aria-label="Seleccionar personaje"
+          ></select>
+        </section>
 
         <div class="stage" aria-label="Escenario del personaje">
           <div class="stage-glow"></div>
@@ -39,9 +49,12 @@
             />
           </button>
         </div>
-      </section>
 
-      <aside class="panel-card">
+        <section class="controls-panel">
+          <p class="eyebrow">Controles</p>
+          <div id="character-actions" class="controls-grid"></div>
+        </section>
+
         <section class="status-panel" aria-live="polite">
           <p class="eyebrow">Estado</p>
           <div class="status-grid">
@@ -68,32 +81,21 @@
           </div>
         </section>
 
-        <section class="controls-panel">
-          <p class="eyebrow">Controles</p>
-          <label class="selector-label" for="character-select">Selecciona personaje</label>
-          <select id="character-select" class="character-select" aria-label="Seleccionar personaje"></select>
-
-          <div id="character-actions" class="controls-grid"></div>
-
-          <div class="utility-grid">
-            <button type="button" class="control-btn control-btn--ghost" data-utility-action="flip">
-              Flip
-            </button>
-            <button type="button" class="control-btn control-btn--ghost" data-utility-action="reset">
-              Reset
-            </button>
-          </div>
-        </section>
-
-        <section class="help-panel">
+        <section class="help-panel" hidden>
           <p class="eyebrow">Interacciones</p>
           <ul class="help-list">
-            <li><strong>Click / tap:</strong> <span id="help-click-action">hurt</span></li>
-            <li><strong>Pulsacion larga:</strong> <span id="help-hold-action">jump</span></li>
+            <li>
+              <strong>Click / tap:</strong>
+              <span id="help-click-action">hurt</span>
+            </li>
+            <li>
+              <strong>Pulsacion larga:</strong>
+              <span id="help-hold-action">run</span>
+            </li>
             <li><strong>Teclado:</strong> <span id="help-shortcuts"></span></li>
           </ul>
         </section>
-      </aside>
+      </section>
     </main>
   </body>
 </html>

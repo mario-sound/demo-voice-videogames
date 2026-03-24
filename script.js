@@ -30,6 +30,8 @@ const state = {
   pressFired: false,
   activePointerId: null,
   jumpVisualTimer: null,
+  tapCount: 0,
+  activeHoldAction: null,
 };
 
 function getCharacterConfig() {
@@ -39,6 +41,11 @@ function getCharacterConfig() {
 function getAnimations() {
   const characterConfig = getCharacterConfig();
   return characterConfig ? characterConfig.actions : {};
+}
+
+function getControlActions() {
+  const characterConfig = getCharacterConfig();
+  return characterConfig?.controlActions || Object.keys(getAnimations());
 }
 
 function getAnimation(actionName) {
@@ -107,11 +114,18 @@ function getRestingAction() {
 }
 
 function getShortcutMarkup() {
+  const visibleActions = new Set(getControlActions());
   const shortcuts = Object.entries(getAnimations())
-    .filter(([, actionConfig]) => actionConfig.shortcut)
-    .map(([, actionConfig]) => `<code>${actionConfig.shortcut}</code> ${actionConfig.label}`);
+    .filter(
+      ([actionName, actionConfig]) =>
+        visibleActions.has(actionName) && actionConfig.shortcut,
+    )
+    .map(
+      ([, actionConfig]) =>
+        `<code>${actionConfig.shortcut}</code> ${actionConfig.label}`,
+    );
 
-  shortcuts.push("<code>f</code> flip", "<code>r</code> reset");
+  shortcuts.push("<code>r</code> reset");
   return shortcuts.join(", ");
 }
 
@@ -119,7 +133,8 @@ function renderSelector() {
   characterSelect.innerHTML = characterKeys
     .map((characterKey) => {
       const characterConfig = characterLibrary[characterKey];
-      const selected = characterKey === state.currentCharacterKey ? "selected" : "";
+      const selected =
+        characterKey === state.currentCharacterKey ? "selected" : "";
 
       return `<option value="${characterKey}" ${selected}>${characterConfig.label}</option>`;
     })
@@ -127,30 +142,50 @@ function renderSelector() {
 }
 
 function renderControls() {
-  const actions = Object.entries(getAnimations());
+  const actions = getControlActions()
+    .map((actionName) => [actionName, getAnimation(actionName)])
+    .filter(([, actionConfig]) => Boolean(actionConfig));
 
-  actionContainer.innerHTML = actions
-    .map(([actionKey, actionConfig]) => {
-      const buttonClass = [
-        "control-btn",
-        state.baseAction === actionKey && actionConfig.loop ? "is-active" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
+  const actionButtons = actions.map(([actionKey, actionConfig]) => {
+    const buttonClass = [
+      "control-btn",
+      state.baseAction === actionKey && actionConfig.loop ? "is-active" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
-      return `
+    return `
         <button type="button" class="${buttonClass}" data-action="${actionKey}">
           ${actionConfig.label}
         </button>
       `;
-    })
-    .join("");
+  });
+
+  actionButtons.push(`
+    <button
+      type="button"
+      class="control-btn control-btn--ghost"
+      data-utility-action="reset"
+    >
+      Reset
+    </button>
+  `);
+
+  actionContainer.innerHTML = actionButtons.join("");
 
   actionContainer.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => {
       handleAction(button.dataset.action, "control");
     });
   });
+
+  actionContainer
+    .querySelectorAll("[data-utility-action]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        handleUtilityAction(button.dataset.utilityAction, "control");
+      });
+    });
 }
 
 function renderHelp() {
@@ -158,8 +193,12 @@ function renderHelp() {
   const clickAction = characterConfig?.interactions?.click;
   const holdAction = characterConfig?.interactions?.hold;
 
-  helpClickAction.textContent = clickAction ? getActionLabel(clickAction) : "sin accion";
-  helpHoldAction.textContent = holdAction ? getActionLabel(holdAction) : "sin accion";
+  helpClickAction.textContent = clickAction
+    ? getActionLabel(clickAction)
+    : "sin accion";
+  helpHoldAction.textContent = holdAction
+    ? getActionLabel(holdAction)
+    : "sin accion";
   helpShortcuts.innerHTML = getShortcutMarkup();
 }
 
@@ -188,6 +227,7 @@ function applyFlip(origin = "flip", options = {}) {
 function resetToBase(origin = "reset") {
   state.isFrozen = false;
   state.isBusy = false;
+  state.activeHoldAction = null;
   playAction(state.baseAction, { origin, force: true });
 }
 
@@ -215,7 +255,10 @@ function startJumpVisual(actionName) {
 
   const animation = getAnimation(actionName);
   const duration = animation
-    ? Math.max(450, Math.round((animation.frames.length / animation.fps) * 1000))
+    ? Math.max(
+        450,
+        Math.round((animation.frames.length / animation.fps) * 1000),
+      )
     : 700;
 
   clearJumpVisual();
@@ -325,13 +368,8 @@ function triggerOneShot(actionName, origin = "interaction") {
 }
 
 function handleUtilityAction(actionName, origin = "control") {
-  if (actionName === "flip") {
-    state.isFlipped = !state.isFlipped;
-    applyFlip(origin);
-    return;
-  }
-
   if (actionName === "reset") {
+    state.tapCount = 0;
     state.baseAction = getDefaultBaseAction(getCharacterConfig());
     state.isFlipped = false;
     applyFlip(origin);
@@ -379,6 +417,8 @@ function switchCharacter(characterKey, origin = "selector") {
   state.frameIndex = 0;
   state.pressFired = false;
   state.activePointerId = null;
+  state.activeHoldAction = null;
+  state.tapCount = 0;
 
   clearPressTimer();
   clearJumpVisual();
@@ -408,22 +448,55 @@ trigger.addEventListener("pointerdown", (event) => {
 
   state.pressTimer = window.setTimeout(() => {
     state.pressFired = true;
+    state.activeHoldAction = holdAction;
     emitCharacterEvent("character:interaction", {
       type: "hold",
       character: state.currentCharacterKey,
       action: holdAction,
     });
+
+    if (getAnimation(holdAction)?.loop) {
+      playAction(holdAction, { origin: "hold", force: true });
+      return;
+    }
+
     triggerOneShot(holdAction, "hold");
   }, holdDelay);
 });
 
 function releasePointerInteraction(origin) {
+  const characterConfig = getCharacterConfig();
   const clickAction = getCharacterConfig()?.interactions?.click;
+  const tapThreshold = characterConfig?.interactions?.tapThreshold ?? 0;
+  const tapThresholdAction = characterConfig?.interactions?.tapThresholdAction;
 
   clearPressTimer();
 
   if (state.pressFired) {
+    if (state.activeHoldAction && getAnimation(state.activeHoldAction)?.loop) {
+      resetToBase(`${origin}-hold-end`);
+    }
+
+    state.activeHoldAction = null;
     state.pressFired = false;
+    state.activePointerId = null;
+    return;
+  }
+
+  state.tapCount += 1;
+
+  if (
+    tapThreshold > 0 &&
+    state.tapCount >= tapThreshold &&
+    tapThresholdAction
+  ) {
+    state.tapCount = 0;
+    emitCharacterEvent("character:interaction", {
+      type: "tap-threshold",
+      character: state.currentCharacterKey,
+      action: tapThresholdAction,
+    });
+    playAction(tapThresholdAction, { origin: "tap-threshold", force: true });
     state.activePointerId = null;
     return;
   }
@@ -463,8 +536,10 @@ trigger.addEventListener("pointercancel", (event) => {
   }
 
   clearPressTimer();
+  state.activeHoldAction = null;
   state.pressFired = false;
   state.activePointerId = null;
+  resetToBase("pointer-cancel");
 });
 
 trigger.addEventListener("pointerleave", (event) => {
@@ -494,12 +569,6 @@ trigger.addEventListener("keydown", (event) => {
   }
 });
 
-utilityButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    handleUtilityAction(button.dataset.utilityAction, "control");
-  });
-});
-
 characterSelect.addEventListener("change", (event) => {
   switchCharacter(event.target.value, "selector");
 });
@@ -507,18 +576,16 @@ characterSelect.addEventListener("change", (event) => {
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
 
-  if (key === "f") {
-    handleUtilityAction("flip", "keyboard");
-    return;
-  }
-
   if (key === "r") {
     handleUtilityAction("reset", "keyboard");
     return;
   }
 
+  const visibleActions = new Set(getControlActions());
   const shortcutMatch = Object.entries(getAnimations()).find(
-    ([, actionConfig]) => actionConfig.shortcut?.toLowerCase() === key,
+    ([actionName, actionConfig]) =>
+      visibleActions.has(actionName) &&
+      actionConfig.shortcut?.toLowerCase() === key,
   );
 
   if (!shortcutMatch) {

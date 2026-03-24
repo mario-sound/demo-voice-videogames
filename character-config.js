@@ -13,8 +13,11 @@ function sequence(basePath, total, options = {}) {
 // - spriteAlt: texto alternativo
 // - defaultBaseAction: animacion en reposo
 // - interactions.click: accion puntual al hacer click o tap
-// - interactions.hold: accion puntual al mantener pulsado
+// - interactions.hold: accion al mantener pulsado
 // - interactions.holdDelay: milisegundos para la pulsacion larga
+// - interactions.tapThreshold: numero de taps para disparar una accion especial
+// - interactions.tapThresholdAction: accion especial al alcanzar el umbral
+// - controlActions: acciones visibles como botones
 // - actions: lista de acciones disponibles
 //
 // Cada accion admite:
@@ -34,9 +37,12 @@ window.CHARACTER_LIBRARY = {
     defaultBaseAction: "idle",
     interactions: {
       click: "hurt",
-      hold: "jump",
-      holdDelay: 380,
+      hold: "run",
+      holdDelay: 260,
+      tapThreshold: 7,
+      tapThresholdAction: "death",
     },
+    controlActions: ["idle", "walk", "attack", "jump", "hurt"],
     actions: {
       idle: {
         label: "Idle",
@@ -61,7 +67,9 @@ window.CHARACTER_LIBRARY = {
       },
       attack: {
         label: "Attack",
-        frames: sequence("./characters/Knight/Attack/attack", 5, { startAt: 0 }),
+        frames: sequence("./characters/Knight/Attack/attack", 5, {
+          startAt: 0,
+        }),
         fps: 12,
         loop: false,
         shortcut: "a",
@@ -96,9 +104,12 @@ window.CHARACTER_LIBRARY = {
     defaultBaseAction: "idle",
     interactions: {
       click: "hurt",
-      hold: "jump",
-      holdDelay: 380,
+      hold: "run",
+      holdDelay: 260,
+      tapThreshold: 7,
+      tapThresholdAction: "death",
     },
+    controlActions: ["idle", "walk", "attack", "jump", "hurt"],
     actions: {
       idle: {
         label: "Idle",
@@ -164,9 +175,12 @@ window.CHARACTER_LIBRARY = {
     defaultBaseAction: "idle",
     interactions: {
       click: "hurt",
-      hold: "jump",
-      holdDelay: 380,
+      hold: "run",
+      holdDelay: 260,
+      tapThreshold: 7,
+      tapThresholdAction: "death",
     },
+    controlActions: ["idle", "walk", "attack", "jump", "hurt"],
     actions: {
       idle: {
         label: "Idle",
