@@ -55,7 +55,7 @@ window.CHARACTER_LIBRARY = {
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
-    controlActions: ["speak", "idle", "walk", "attack", "jump"],
+    controlActions: ["speak", "jump", "attack", "walk", "idle"],
     actions: {
       idle: {
         label: "Idle",
@@ -147,7 +147,7 @@ window.CHARACTER_LIBRARY = {
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
-    controlActions: ["speak", "idle", "walk", "attack", "jump"],
+    controlActions: ["speak", "jump", "attack", "walk", "idle"],
     actions: {
       idle: {
         label: "Idle",
@@ -237,7 +237,7 @@ window.CHARACTER_LIBRARY = {
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
-    controlActions: ["speak", "idle", "walk", "attack", "jump"],
+    controlActions: ["speak", "jump", "attack", "walk", "idle"],
     actions: {
       idle: {
         label: "Idle",
