@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demo personaje PNG interactivo</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./character-config.js" defer></script>
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="scene-card">
+        <div class="scene-copy">
+          <p class="eyebrow">Demo base</p>
+          <h1>Personaje PNG interactivo</h1>
+          <p class="scene-description">
+            Toca o haz click en el personaje para disparar acciones, manten la
+            pulsacion para acciones largas o usa los botones. Esta estructura
+            queda preparada para conectar notificaciones mas adelante.
+          </p>
+        </div>
+
+        <div class="stage" aria-label="Escenario del personaje">
+          <div class="stage-glow"></div>
+          <div class="stage-floor"></div>
+
+          <button
+            id="character-trigger"
+            class="character-trigger"
+            type="button"
+            aria-label="Interactuar con el personaje"
+          >
+            <img
+              id="character-sprite"
+              class="character-sprite"
+              src="./characters/Knight/Idle/idle1.png"
+              alt="Caballero pixel art"
+            />
+          </button>
+        </div>
+      </section>
+
+      <aside class="panel-card">
+        <section class="status-panel" aria-live="polite">
+          <p class="eyebrow">Estado</p>
+          <div class="status-grid">
+            <div>
+              <span class="status-label">Personaje</span>
+              <strong id="status-character">Knight</strong>
+            </div>
+            <div>
+              <span class="status-label">Accion</span>
+              <strong id="status-action">idle</strong>
+            </div>
+            <div>
+              <span class="status-label">Origen</span>
+              <strong id="status-origin">inicio</strong>
+            </div>
+            <div>
+              <span class="status-label">Modo base</span>
+              <strong id="status-base">idle</strong>
+            </div>
+            <div>
+              <span class="status-label">Mirada</span>
+              <strong id="status-facing">derecha</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="controls-panel">
+          <p class="eyebrow">Controles</p>
+          <label class="selector-label" for="character-select">Selecciona personaje</label>
+          <select id="character-select" class="character-select" aria-label="Seleccionar personaje"></select>
+
+          <div id="character-actions" class="controls-grid"></div>
+
+          <div class="utility-grid">
+            <button type="button" class="control-btn control-btn--ghost" data-utility-action="flip">
+              Flip
+            </button>
+            <button type="button" class="control-btn control-btn--ghost" data-utility-action="reset">
+              Reset
+            </button>
+          </div>
+        </section>
+
+        <section class="help-panel">
+          <p class="eyebrow">Interacciones</p>
+          <ul class="help-list">
+            <li><strong>Click / tap:</strong> <span id="help-click-action">hurt</span></li>
+            <li><strong>Pulsacion larga:</strong> <span id="help-hold-action">jump</span></li>
+            <li><strong>Teclado:</strong> <span id="help-shortcuts"></span></li>
+          </ul>
+        </section>
+      </aside>
+    </main>
+  </body>
+</html>
