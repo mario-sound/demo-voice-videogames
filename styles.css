@@ -182,6 +182,9 @@ h1 {
   cursor: pointer;
   transition: transform 180ms ease;
   touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .character-trigger:focus-visible {

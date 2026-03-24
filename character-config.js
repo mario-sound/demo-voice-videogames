@@ -13,8 +13,6 @@ function sequence(basePath, total, options = {}) {
 // - spriteAlt: texto alternativo
 // - defaultBaseAction: animacion en reposo
 // - interactions.click: accion puntual al hacer click o tap
-// - interactions.hold: accion al mantener pulsado
-// - interactions.holdDelay: milisegundos para la pulsacion larga
 // - interactions.tapThreshold: numero de taps para disparar una accion especial
 // - interactions.tapThresholdAction: accion especial al alcanzar el umbral
 // - controlActions: acciones visibles como botones
@@ -37,8 +35,6 @@ window.CHARACTER_LIBRARY = {
     defaultBaseAction: "idle",
     interactions: {
       click: "hurt",
-      hold: "run",
-      holdDelay: 260,
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
@@ -74,12 +70,36 @@ window.CHARACTER_LIBRARY = {
         loop: false,
         shortcut: "a",
       },
+      attackExtra: {
+        label: "Attack Extra",
+        frames: sequence("./characters/Knight/Attack_Extra/attack_extra", 8),
+        fps: 14,
+        loop: false,
+      },
+      walkAttack: {
+        label: "Walk Attack",
+        frames: sequence("./characters/Knight/Walk_Attack/walk_attack", 6),
+        fps: 12,
+        loop: false,
+      },
+      runAttack: {
+        label: "Run Attack",
+        frames: sequence("./characters/Knight/Run_Attack/run_attack", 8),
+        fps: 14,
+        loop: false,
+      },
       jump: {
         label: "Jump",
         frames: sequence("./characters/Knight/Jump/jump", 7),
         fps: 10,
         loop: false,
         shortcut: "j",
+      },
+      highJump: {
+        label: "High Jump",
+        frames: sequence("./characters/Knight/High_Jump/high_jump", 12),
+        fps: 11,
+        loop: false,
       },
       hurt: {
         label: "Hurt",
@@ -104,8 +124,6 @@ window.CHARACTER_LIBRARY = {
     defaultBaseAction: "idle",
     interactions: {
       click: "hurt",
-      hold: "run",
-      holdDelay: 260,
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
@@ -139,12 +157,30 @@ window.CHARACTER_LIBRARY = {
         loop: false,
         shortcut: "a",
       },
+      walkAttack: {
+        label: "Walk Attack",
+        frames: sequence("./characters/Rogue/Walk_Attack/walk_attack", 6),
+        fps: 13,
+        loop: false,
+      },
+      runAttack: {
+        label: "Run Attack",
+        frames: sequence("./characters/Rogue/Run_Attack/run_attack", 8),
+        fps: 15,
+        loop: false,
+      },
       jump: {
         label: "Jump",
         frames: sequence("./characters/Rogue/Jump/jump", 7),
         fps: 11,
         loop: false,
         shortcut: "j",
+      },
+      highJump: {
+        label: "High Jump",
+        frames: sequence("./characters/Rogue/High_Jump/high_jump", 12),
+        fps: 12,
+        loop: false,
       },
       hurt: {
         label: "Hurt",
@@ -175,8 +211,6 @@ window.CHARACTER_LIBRARY = {
     defaultBaseAction: "idle",
     interactions: {
       click: "hurt",
-      hold: "run",
-      holdDelay: 260,
       tapThreshold: 7,
       tapThresholdAction: "death",
     },
@@ -210,6 +244,26 @@ window.CHARACTER_LIBRARY = {
         loop: false,
         shortcut: "a",
       },
+      attackExtra: {
+        label: "Attack Extra",
+        frames: sequence("./characters/Mage/Attack_Extra/attack_extra", 7, {
+          startAt: 0,
+        }),
+        fps: 13,
+        loop: false,
+      },
+      walkAttack: {
+        label: "Walk Attack",
+        frames: sequence("./characters/Mage/Walk_Attack/walk_attack", 6),
+        fps: 12,
+        loop: false,
+      },
+      runAttack: {
+        label: "Run Attack",
+        frames: sequence("./characters/Mage/Run_Attack/run_attack", 8),
+        fps: 14,
+        loop: false,
+      },
       fire: {
         label: "Fire",
         frames: sequence("./characters/Mage/Fire/fire", 9),
@@ -223,6 +277,12 @@ window.CHARACTER_LIBRARY = {
         fps: 10,
         loop: false,
         shortcut: "j",
+      },
+      highJump: {
+        label: "High Jump",
+        frames: sequence("./characters/Mage/High_Jump/high_jump", 12),
+        fps: 11,
+        loop: false,
       },
       hurt: {
         label: "Hurt",

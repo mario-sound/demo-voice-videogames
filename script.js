@@ -4,7 +4,6 @@ const characterKeys = Object.keys(characterLibrary);
 const sprite = document.querySelector("#character-sprite");
 const trigger = document.querySelector("#character-trigger");
 const actionContainer = document.querySelector("#character-actions");
-const utilityButtons = document.querySelectorAll("[data-utility-action]");
 const characterSelect = document.querySelector("#character-select");
 
 const statusCharacter = document.querySelector("#status-character");
@@ -26,12 +25,11 @@ const state = {
   isFlipped: false,
   frameIndex: 0,
   frameTimer: null,
-  pressTimer: null,
-  pressFired: false,
   activePointerId: null,
   jumpVisualTimer: null,
   tapCount: 0,
-  activeHoldAction: null,
+  attackAltIndex: 0,
+  jumpAltIndex: 0,
 };
 
 function getCharacterConfig() {
@@ -191,14 +189,11 @@ function renderControls() {
 function renderHelp() {
   const characterConfig = getCharacterConfig();
   const clickAction = characterConfig?.interactions?.click;
-  const holdAction = characterConfig?.interactions?.hold;
 
   helpClickAction.textContent = clickAction
     ? getActionLabel(clickAction)
     : "sin accion";
-  helpHoldAction.textContent = holdAction
-    ? getActionLabel(holdAction)
-    : "sin accion";
+  helpHoldAction.textContent = "sin accion";
   helpShortcuts.innerHTML = getShortcutMarkup();
 }
 
@@ -227,15 +222,7 @@ function applyFlip(origin = "flip", options = {}) {
 function resetToBase(origin = "reset") {
   state.isFrozen = false;
   state.isBusy = false;
-  state.activeHoldAction = null;
   playAction(state.baseAction, { origin, force: true });
-}
-
-function clearPressTimer() {
-  if (state.pressTimer) {
-    window.clearTimeout(state.pressTimer);
-    state.pressTimer = null;
-  }
 }
 
 function clearJumpVisual() {
@@ -248,7 +235,7 @@ function clearJumpVisual() {
 }
 
 function startJumpVisual(actionName) {
-  if (actionName !== "jump") {
+  if (actionName !== "jump" && actionName !== "highJump") {
     clearJumpVisual();
     return;
   }
@@ -370,6 +357,8 @@ function triggerOneShot(actionName, origin = "interaction") {
 function handleUtilityAction(actionName, origin = "control") {
   if (actionName === "reset") {
     state.tapCount = 0;
+    state.attackAltIndex = 0;
+    state.jumpAltIndex = 0;
     state.baseAction = getDefaultBaseAction(getCharacterConfig());
     state.isFlipped = false;
     applyFlip(origin);
@@ -377,7 +366,95 @@ function handleUtilityAction(actionName, origin = "control") {
   }
 }
 
+function resolveAttackAction() {
+  if (state.baseAction === "walk" && getAnimation("walkAttack")) {
+    return "walkAttack";
+  }
+
+  if (state.baseAction === "run" && getAnimation("runAttack")) {
+    return "runAttack";
+  }
+
+  if (state.baseAction === "idle") {
+    const idleAttackOptions = ["attack", "attackExtra"].filter((actionName) =>
+      Boolean(getAnimation(actionName)),
+    );
+
+    if (!idleAttackOptions.length) {
+      return null;
+    }
+
+    const nextAction =
+      idleAttackOptions[state.attackAltIndex % idleAttackOptions.length];
+    state.attackAltIndex += 1;
+    return nextAction;
+  }
+
+  if (getAnimation("attack")) {
+    return "attack";
+  }
+
+  return null;
+}
+
+function resolveJumpAction() {
+  const jumpOptions = ["jump", "highJump"].filter((actionName) =>
+    Boolean(getAnimation(actionName)),
+  );
+
+  if (!jumpOptions.length) {
+    return null;
+  }
+
+  const nextAction = jumpOptions[state.jumpAltIndex % jumpOptions.length];
+  state.jumpAltIndex += 1;
+  return nextAction;
+}
+
 function handleAction(actionName, origin = "control") {
+  if (actionName === "walk") {
+    const toggledAction =
+      state.baseAction === "walk" ? "run" : state.baseAction === "run" ? "walk" : "walk";
+
+    setBaseAction(toggledAction, origin);
+    emitCharacterEvent("character:interaction", {
+      type: "base-action",
+      character: state.currentCharacterKey,
+      action: toggledAction,
+    });
+    return;
+  }
+
+  if (actionName === "attack") {
+    const resolvedAttack = resolveAttackAction();
+    if (!resolvedAttack) {
+      return;
+    }
+
+    triggerOneShot(resolvedAttack, origin);
+    emitCharacterEvent("character:interaction", {
+      type: "one-shot",
+      character: state.currentCharacterKey,
+      action: resolvedAttack,
+    });
+    return;
+  }
+
+  if (actionName === "jump") {
+    const resolvedJump = resolveJumpAction();
+    if (!resolvedJump) {
+      return;
+    }
+
+    triggerOneShot(resolvedJump, origin);
+    emitCharacterEvent("character:interaction", {
+      type: "one-shot",
+      character: state.currentCharacterKey,
+      action: resolvedJump,
+    });
+    return;
+  }
+
   const animation = getAnimation(actionName);
   if (!animation) {
     return;
@@ -415,12 +492,11 @@ function switchCharacter(characterKey, origin = "selector") {
   state.isFrozen = false;
   state.isFlipped = false;
   state.frameIndex = 0;
-  state.pressFired = false;
   state.activePointerId = null;
-  state.activeHoldAction = null;
   state.tapCount = 0;
+  state.attackAltIndex = 0;
+  state.jumpAltIndex = 0;
 
-  clearPressTimer();
   clearJumpVisual();
   sprite.alt = nextCharacter.spriteAlt || nextCharacter.label;
   applyFlip(origin, { emit: false });
@@ -434,34 +510,8 @@ function switchCharacter(characterKey, origin = "selector") {
 }
 
 trigger.addEventListener("pointerdown", (event) => {
-  const holdDelay = getCharacterConfig()?.interactions?.holdDelay ?? 380;
-  const holdAction = getCharacterConfig()?.interactions?.hold;
-
   trigger.setPointerCapture(event.pointerId);
   state.activePointerId = event.pointerId;
-  state.pressFired = false;
-  clearPressTimer();
-
-  if (!holdAction) {
-    return;
-  }
-
-  state.pressTimer = window.setTimeout(() => {
-    state.pressFired = true;
-    state.activeHoldAction = holdAction;
-    emitCharacterEvent("character:interaction", {
-      type: "hold",
-      character: state.currentCharacterKey,
-      action: holdAction,
-    });
-
-    if (getAnimation(holdAction)?.loop) {
-      playAction(holdAction, { origin: "hold", force: true });
-      return;
-    }
-
-    triggerOneShot(holdAction, "hold");
-  }, holdDelay);
 });
 
 function releasePointerInteraction(origin) {
@@ -469,19 +519,6 @@ function releasePointerInteraction(origin) {
   const clickAction = getCharacterConfig()?.interactions?.click;
   const tapThreshold = characterConfig?.interactions?.tapThreshold ?? 0;
   const tapThresholdAction = characterConfig?.interactions?.tapThresholdAction;
-
-  clearPressTimer();
-
-  if (state.pressFired) {
-    if (state.activeHoldAction && getAnimation(state.activeHoldAction)?.loop) {
-      resetToBase(`${origin}-hold-end`);
-    }
-
-    state.activeHoldAction = null;
-    state.pressFired = false;
-    state.activePointerId = null;
-    return;
-  }
 
   state.tapCount += 1;
 
@@ -535,19 +572,17 @@ trigger.addEventListener("pointercancel", (event) => {
     trigger.releasePointerCapture(event.pointerId);
   }
 
-  clearPressTimer();
-  state.activeHoldAction = null;
-  state.pressFired = false;
   state.activePointerId = null;
-  resetToBase("pointer-cancel");
 });
 
 trigger.addEventListener("pointerleave", (event) => {
   if (state.activePointerId !== event.pointerId) {
     return;
   }
+});
 
-  clearPressTimer();
+trigger.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
 });
 
 trigger.addEventListener("keydown", (event) => {
